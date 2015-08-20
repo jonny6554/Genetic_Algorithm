@@ -12,16 +12,20 @@ classdef Population < handle
        m; %Number of lines in one individual.
        n; %Number of columns in one invidual.
        window; %The figure onto which members of the population are displayed on the SLM.
+       size; %The number of individuals in the current population.
    end
    properties (Dependent)
       powerMeter; %This value contains an address pointing towards powerMeter.
       ratings; %This value contains an adress pointing towards rating_.
       individuals; %This value contains an address pointing towards individual_.
    end
-   properties (Constant)
+   properties (Constant) 
        MAXIMUM_PIXEL_VALUE = 255; %The maximum value a pixel can be.
        MINIMUM_PIXEL_VALUE = 0; %The minimum value a pixel can be.
        NAME_OF_POWERMETER_OUTPUT_FILE = 'test.txt'; %The name of the file that the power meter ourputs to.
+       PAUSE_BETWEEN_ADDITION = 0;
+       MUTATION_FACTOR = 10;    %This value indicates, in percentage, the number of values that will be mutated inside a child.
+       MUTATION_FREQUENCY = 10; %This value indicates, in percentage, how frequently a child will receive a mutation.
    end
    methods
        function object = Population(size, m, n, figureNumber)
@@ -39,6 +43,7 @@ classdef Population < handle
            object.window = figure(figureNumber);
            object.ratings_(size) = 0;
            object.powerMeter_ = PowerMeter(Population.NAME_OF_POWERMETER_OUTPUT_FILE);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+           object.size = size;
            
            %Set the figure
            set(object.window,'menubar','none','units','pixels');
@@ -56,17 +61,6 @@ classdef Population < handle
               object.ratings_(i) = rate(object, object.individuals_(:,:,i));
            end
            [object.ratings_, object.index] = sort(object.ratings_, 'descend');
-       end
-       
-       function result = rate(object, individual)
-            %Rates an individual of the population.
-            %   individual : a member of the population
-            %   powerMeter : the powermeter object.
-            
-            %Module
-            imagesc(individual); %Display the individual on the figure.
-            axis off;
-            result = object.powerMeter_.getCurrentValue(individual); 
        end
         
        function result = get.ratings(object)
@@ -93,10 +87,10 @@ classdef Population < handle
            % sought.
            
            %Module
-           result = powerMeter_;
+           result = object.powerMeter_;
        end
        
-       function result = bestValue(object)
+       function result = getbestValue(object)
            %Returns the highest rating obtained by a member of the
            %population.
            %    @object: the population for which the best rating is
@@ -107,7 +101,18 @@ classdef Population < handle
            result = object.ratings_(1);
        end
        
-    function addToFirst(object, object2)
+       function result = rate(object, individual)
+            %Rates an individual of the population.
+            %   individual : a member of the population
+            %   powerMeter : the powermeter object.
+
+            %Module
+            imagesc(individual); %Display the individual on the figure.
+            axis off;
+            result = getCurrentValue(object.powerMeter_, individual); 
+       end
+       
+       function addToFirst(object, object2)
            %This function combines two populations. Result is placed in
            %the object making the call.
            %    @object : the first population.
@@ -155,7 +160,7 @@ classdef Population < handle
            end
        end
        
-    function result = mate(object)
+       function result = permutate(object)
            %A child is created within the population.
            %    object : the population from which the child is created.
            %    result : returns the power outputed by the child.
@@ -168,25 +173,52 @@ classdef Population < handle
                selection1 = generateRandomValue(object);
                selection2 = generateRandomValue(object);
            end
-           selection1=1;
+           
            %Obtaining individuals from population.
-           parent1 = object.getIndividual(selection1);
-           parent2 = object.getIndividual(selection2);
-           display(parent1);
+           parent1 = getIndividual(object, selection1);
+           parent2 = getIndividual(object, selection2);
+           
            %Select values genes that will be taken from those individuals.
            %to produce a child.
            parent1Genes = randi([0, 1], [object.m, object.n]);
            parent2Genes = ~parent1Genes;
            %Create child of selected parents.
            child = parent1Genes.*parent1 + parent2Genes.*parent2;
+           %Mutate the child
+           if (rand > (Population.MUTATION_FREQUENCY/100))
+               child = mutate(object, child);
+           end
            %Add individual to the population if it has a better rating than
            %the worst rating amongst the population.
-           ratingOfChild = rate(object, child);            
-           add(object, child, ratingOfChild);
+           ratingOfChild = rate(object, child);
+           add(object, child, ratingOfChild);  
            result = ratingOfChild;
+           
        end
    end
    methods (Access = private)
+       function result = mutate(object, child)
+           %This function arbitrarily changes a percentage of the value in
+           %a given matrix.
+           %    @object : the current population which is making the call
+           %    for a mutation
+           %    @child : the matrix which will be mutated.
+           %    @result : the mutated version of the variable child.
+           
+           %Module
+           %Mutates a given matrix. Call this function only sometimes
+           amountOfMutation = floor(size(object.individuals_, 1)*size(object.individuals_, 2)*(Population.MUTATION_FACTOR/100)); %The number of individuals that will be mutated.
+           completedMutations = 0; %Indicates the total number of successful mutations.
+           %Module
+           while(amountOfMutation < completedMutations)
+               randomM = randi(size(object.indiduals_, 1));
+               randomN = randi(size(object.indiduals_, 2));
+               child(randomM, randomN) = randi(Population.MAXIMUM_PIXEL_VALUE);
+               completedMutations = completedMutations + 1;
+           end
+           result = child;
+       end
+       
        function result = generateRandomValue(object)
           %Generates a random value between 1 and the size of the
           %population.
@@ -194,7 +226,7 @@ classdef Population < handle
           %     individual is sought.
            
           %Module
-          result = floor(rand*rand*(size(object.individuals_(:,:,:), 3)) + 1); 
+          result = floor(rand*rand*(object.size) + 1); 
        end
        
        function result = getIndividual(object, index)
@@ -219,8 +251,9 @@ classdef Population < handle
             %in the population, add that individual to the population and
             %delete the old individual.
             display(num2str(object.ratings_));
-            pause(0.05);
+            pause(Population.PAUSE_BETWEEN_ADDITION);
            if (newRatings(length(newRatings)) ~= newIndividualsRating)
+               
                object.individuals_(:,:,newIndex(length(newIndex))) = individual;
                object.ratings_(length(object.ratings_)) = newIndividualsRating;
                [object.ratings_, object.index] = sort(object.ratings_, 'descend');

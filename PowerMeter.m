@@ -12,8 +12,7 @@ classdef PowerMeter<handle
            %    @object : the fake powerMeter being created
            object.text = text;
            size = get(gcf, 'Position');
-           display(num2str(size));
-           object.solution = randi(4,4);
+           object.solution = randi(300,300);
            object.history = 0;
         end
         
@@ -21,6 +20,7 @@ classdef PowerMeter<handle
             %The current value displayed by the algorithm.
             %   @object : the current powermeter for which the fake value is sought.
             %   @matrix : a potential solution
+             
              value = 1/sum(sum(abs(object.solution - matrix)));
              object.history = [object.history, value];
              figure(2);
