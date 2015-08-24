@@ -12,7 +12,7 @@ classdef PowerMeter<handle
            %    @object : the fake powerMeter being created
            object.text = text;
            size = get(gcf, 'Position');
-           object.solution = randi(300,300);
+           object.solution = randi(4,4);
            object.history = 0;
         end
         

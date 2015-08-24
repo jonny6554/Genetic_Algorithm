@@ -23,9 +23,7 @@ function geneticAlgorithm(groupsM, groupsN, figureNumber)
              powerProgression = [powerProgression, ratingOfChild];
          end
          toc
-         tic
          mutatedPopulation.addToFirst(population);
-         toc
          population = mutatedPopulation;
     end
     display(['The intial value, ', num2str(initialPower), ', has been augmented successfully by atleast a factor of ', num2str(POWER_IMPROVEMENT), '!']);

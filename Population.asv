@@ -123,11 +123,11 @@ classdef Population < handle
            %delete the old individual.
            if(isa(object, 'Population') && isa(object2, 'Population') && length(object.ratings_) == length(object2.ratings))
                %Declaraton and definition of variables
-               difIndex = find(object2.ratings_ ~= object.ratings); %Index of changes to object. (Differences index)
+               difIndex = find(object2.ratings_ ~= object.ratings) %Index of changes to object. (Differences index)
                
                %Module
-               for i = 1:length(difIndex)
-                   add(object, object2.individuals_(:, :, object.index(difIndex(i)), object2.ratings_(difIndex(i))));
+               for i = 1:length(lines)
+                   add(object, object2.individuals_(:, :, object.index(difIndex(i)), object2.ratings_(difIndex(i)));
                end
            else
                errorInfo.message = 'Program failed because values passed to populations addToFirst method were not Population objects or the length of the objects is not equal!';
