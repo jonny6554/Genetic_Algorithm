@@ -4,6 +4,7 @@ classdef PowerMeter<handle
        solution; %The solution that is sought by the algorithm.
        text;
        history; %History of all values
+       rating; %The rating of the the solution.
     end
     methods
         function object = PowerMeter(text)
@@ -11,8 +12,8 @@ classdef PowerMeter<handle
            %    @text : the fake name of the file.
            %    @object : the fake powerMeter being created
            object.text = text;
-           size = get(gcf, 'Position');
-           object.solution =randi(Population.MAXIMUM_PIXEL_VALUE, 30,30);
+           object.solution = randi(30,30);
+           object.rating = sum(sum(object.solution));
            object.history = 0;
         end
         
@@ -20,19 +21,9 @@ classdef PowerMeter<handle
             %The current value displayed by the algorithm.
             %   @object : the current powermeter for which the fake value is sought.
             %   @matrix : a potential solution
-            %Locations of Bigger and Smalller.
-             biggerThan = matrix > object.solution;
-             smallerThan = matrix < object.solution;
-            %Power Output
-             totalSmall = (smallerThan.*matrix)./(smallerThan.*object.solution + ~smallerThan);
-             totalBig = (biggerThan.*object.solution)./(biggerThan.*matrix+~biggerThan);
-             currentRating = mean(mean(totalSmall+totalBig));
-             
-             if (currentRating == 0)
-                pause(10000000); 
-             end
-             object.history = [object.history, currentRating];
-             result = currentRating;
+             value = 1/sum(sum(abs(object.solution - matrix)));
+             object.history = [object.history, value];
+             result = value;
         end
     end
 end

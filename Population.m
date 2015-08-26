@@ -27,6 +27,8 @@ classdef Population < handle
        MUTATION_FACTOR = 100;    %This value indicates, in percentage, the number of values that will be mutated inside a child.
        MUTATION_FREQUENCY = 100; %This value indicates, in percentage, how frequently a child will receive a mutation.
        POWER_OF_RANDOM_GENERATOR =2; %The power to which the random value generated is put.
+       NUMBER_OF_CHILDREN = 20; %The number of children per permutation of the population.
+       BEST_CHILDREN_INSERTED = 1; %The number of children generated during permutation that are inserted into the population.
    end
    methods
        function object = Population(size, m, n, figureNumber)
@@ -63,13 +65,7 @@ classdef Population < handle
            end
            [object.ratings_, object.index] = sort(object.ratings_, 'descend');
        end
-       
-       function makeIdentical(object, object2)
-           object.ratings_ = object2.ratings_;
-           object.index = object2.index;
-           object.individuals_ = object2.individuals_;
-       end
-       
+
        function result = get.ratings(object)
           %Gets the ratings of the population
           % @object : the current populatino for which the rating is
@@ -115,6 +111,7 @@ classdef Population < handle
 
             %Module
             pause(Population.PAUSE_BETWEEN_DISPLAY);
+            figure(object.window);
             imagesc(individual); %Display the individual on the figure.
             axis off;
             result = getCurrentValue(object.powerMeter_, individual); 
@@ -175,41 +172,49 @@ classdef Population < handle
            %A child is created within the population.
            %    object : the population from which the child is created.
            %    result : returns the power outputed by the child.
-            
+           children = zeros(object.m, object.n, Population.NUMBER_OF_CHILDREN); %The children generated during permutation
+           ratings = zeros(1, Population.NUMBER_OF_CHILDREN);
            %Module
            %Select individuals for mating.
-           selection1 = generateRandomValue(object);
-           selection2 = generateRandomValue(object);
-           while (selection1 == selection2)
+           for i=1:Population.NUMBER_OF_CHILDREN
                selection1 = generateRandomValue(object);
                selection2 = generateRandomValue(object);
+               while (selection1 == selection2)
+                   selection1 = generateRandomValue(object);
+                   selection2 = generateRandomValue(object);
+               end
+
+               %Obtaining individuals from population.
+               parent1 = getIndividual(object, selection1);
+               parent2 = getIndividual(object, selection2);
+
+    %            if (rand <= 0) %Randomly insert a parent sometimes. (Currently 0% of the time)
+    %                parent2 = randi(Population.MAXIMUM_PIXEL_VALUE - Population.MINIMUM_PIXEL_VALUE, object.m, object.n);
+    %            end
+               %(SELECTION) Select values genes that will be taken from those individuals.
+               %to produce a child.
+               parent1Genes = randi([0, 1], [object.m, object.n]);
+               parent2Genes = ~parent1Genes;
+
+               %(CROSSOVER)Create child of selected parents.
+               child = parent1Genes.*parent1 + parent2Genes.*parent2;
+
+               %(MUTATION)Mutate the child
+               if (rand <= (Population.MUTATION_FREQUENCY/100))
+                   child = mutate(object, child);
+               end
+
+               %(EVALUATION)Add individual to the population if it has a better rating than
+               %the worst rating amongst the population.
+               ratings(i) = rate(object, child);
+               children(:,:,i) = child;
            end
-           
-           %Obtaining individuals from population.
-           parent1 = getIndividual(object, selection1);
-           parent2 = getIndividual(object, selection2);
-           
-           if (rand <= 0)
-               parent2 = randi(Population.MAXIMUM_PIXEL_VALUE - Population.MINIMUM_PIXEL_VALUE, object.m, object.n);
+           [ratings, childIndex] = sort(ratings, 'descend');
+           display(num2str(ratings));
+           for i = 1:Population.BEST_CHILDREN_INSERTED
+              add(object, children(:,:,childIndex(i)), ratings(i)); 
            end
-           %(SELECTION) Select values genes that will be taken from those individuals.
-           %to produce a child.
-           parent1Genes = randi([0, 1], [object.m, object.n]);
-           parent2Genes = ~parent1Genes;
-           
-           %(CROSSOVER)Create child of selected parents.
-           child = parent1Genes.*parent1 + parent2Genes.*parent2;
-           
-           %(MUTATION)Mutate the child
-           if (rand <= (Population.MUTATION_FREQUENCY/100))
-               child = mutate(object, child);
-           end
-           
-           %(EVALUATION)Add individual to the population if it has a better rating than
-           %the worst rating amongst the population.
-           ratingOfChild = rate(object, child);
-           add(object, child, ratingOfChild);  
-           result = ratingOfChild;
+           result = ratings(1:Population.BEST_CHILDREN_INSERTED);
        end
    end
    methods (Access = private)
@@ -268,7 +273,7 @@ classdef Population < handle
             %If the new individual's rating is better than the worst rating 
             %in the population, add that individual to the population and
             %delete the old individual.
-            display(['The new individuals rating is ',num2str(newIndividualsRating)]);
+            display(['The new individuals rating is ', num2str(newIndividualsRating), '.']);
             display(num2str(object.ratings_));
            if (newRatings(length(newRatings)) ~= newIndividualsRating)
                object.individuals_(:,:,newIndex(length(newIndex))) = individual;
