@@ -23,9 +23,10 @@ classdef Population < handle
        MAXIMUM_PIXEL_VALUE = 255; %The maximum value a pixel can be.
        MINIMUM_PIXEL_VALUE = 0; %The minimum value a pixel can be.
        NAME_OF_POWERMETER_OUTPUT_FILE = 'test.txt'; %The name of the file that the power meter ourputs to.
-       PAUSE_BETWEEN_ADDITION = 0;
+       PAUSE_BETWEEN_DISPLAY = 0.01; %Pause time between display of figures.
        MUTATION_FACTOR = 10;    %This value indicates, in percentage, the number of values that will be mutated inside a child.
        MUTATION_FREQUENCY = 10; %This value indicates, in percentage, how frequently a child will receive a mutation.
+       POWER_OF_RANDOM_GENERATOR =2; %The power to which the random value generated is put.
    end
    methods
        function object = Population(size, m, n, figureNumber)
@@ -44,7 +45,7 @@ classdef Population < handle
            object.ratings_(size) = 0;
            object.powerMeter_ = PowerMeter(Population.NAME_OF_POWERMETER_OUTPUT_FILE);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
            object.size = size;
-           
+
            %Set the figure
            set(object.window,'menubar','none','units','pixels');
            set(object.window,'Resize','off'); % Disable resizing 
@@ -62,14 +63,20 @@ classdef Population < handle
            end
            [object.ratings_, object.index] = sort(object.ratings_, 'descend');
        end
-        
+       
+       function makeIdentical(object, object2)
+           object.ratings_ = object2.ratings_;
+           object.index = object2.index;
+           object.individuals_ = object2.individuals_;
+       end
+       
        function result = get.ratings(object)
           %Gets the ratings of the population
           % @object : the current populatino for which the rating is
           % sought.
           
           %Module
-          result = object.ratings_();
+          result = object.ratings_;
        end
        
        function result = get.individuals(object)
@@ -107,6 +114,7 @@ classdef Population < handle
             %   powerMeter : the powermeter object.
 
             %Module
+            pause(Population.PAUSE_BETWEEN_DISPLAY);
             imagesc(individual); %Display the individual on the figure.
             axis off;
             result = getCurrentValue(object.powerMeter_, individual); 
@@ -123,12 +131,39 @@ classdef Population < handle
            %delete the old individual.
            if(isa(object, 'Population') && isa(object2, 'Population') && length(object.ratings_) == length(object2.ratings))
                %Declaraton and definition of variables
-               difIndex = find(object2.ratings_ ~= object.ratings) %Index of changes to object. (Differences index)
-               
+               %-->newRatings: the ratings of both objects in descending order.
+               %-->newIndex: the index of the individuals inside.
+               [newRatings, newIndex] = sort([object.ratings_, object2.ratings_], 'descend');
+               %-->newIndividuals: the combination of both population.
+               newIndividuals(:,:,:) = zeros(object.m, object.n, object.size);
+               actualRatings = zeros(floor(length(newIndex)/2)); %The new series of ratings
+               actualIndex = 1; %The index of the new population.
                %Module
-               for i = 1:length(lines)
-                   add(object, object2.individuals_(:, :, object.index(difIndex(i)), object2.ratings_(difIndex(i)));
+               display(num2str(object.ratings_));
+               for i= 1:floor(length(newIndex))
+                   if(newIndex(i) <= floor(length(newIndex)/2))
+                       if(actualIndex==1 || ~sum(newRatings(i)==actualRatings(1:(actualIndex-1))))
+                            newIndividuals(:,:,actualIndex) = object.individuals_(:,:,newIndex(i));
+                            actualRatings(actualIndex) = newRatings(i);
+                            actualIndex = actualIndex + 1;
+                       end
+                   else
+                       if(actualIndex==1 || ~sum(newRatings(i)==actualRatings(1:(actualIndex-1))))
+                            newIndividuals(:,:,actualIndex) = object2.individuals_(:,:,mod(newIndex(i), object.size)+1);
+                            actualRatings(actualIndex) = newRatings(i);
+                            actualIndex = actualIndex + 1;
+                       end
+                   end
+                   if (actualIndex == (object.size+1))
+                       display(num2str(i));
+                       display('done');
+                      break; 
+                   end
                end
+               object.individuals_(:,:,:) = newIndividuals;
+               object.ratings_ = actualRatings(1:object.size);
+               object.index = mod(newIndex(1:object.size), object.size);
+               display(['Add to first', num2str(actualRatings(1:object.size))]);
            else
                errorInfo.message = 'Program failed because values passed to populations addToFirst method were not Population objects or the length of the objects is not equal!';
                errorInfo.identifier = 'Population:IncorrectValueTypes';
@@ -154,22 +189,27 @@ classdef Population < handle
            parent1 = getIndividual(object, selection1);
            parent2 = getIndividual(object, selection2);
            
-           %Select values genes that will be taken from those individuals.
+           if (rand > 0.33)
+               parent2 = rand(Population.)
+           end
+           %(SELECTION) Select values genes that will be taken from those individuals.
            %to produce a child.
            parent1Genes = randi([0, 1], [object.m, object.n]);
            parent2Genes = ~parent1Genes;
-           %Create child of selected parents.
+           
+           %(CROSSOVER)Create child of selected parents.
            child = parent1Genes.*parent1 + parent2Genes.*parent2;
-           %Mutate the child
-           if (rand > (Population.MUTATION_FREQUENCY/100))
+           
+           %(MUTATION)Mutate the child
+           if (rand <= (Population.MUTATION_FREQUENCY/100))
                child = mutate(object, child);
            end
-           %Add individual to the population if it has a better rating than
+           
+           %(EVALUATION)Add individual to the population if it has a better rating than
            %the worst rating amongst the population.
            ratingOfChild = rate(object, child);
            add(object, child, ratingOfChild);  
            result = ratingOfChild;
-           
        end
    end
    methods (Access = private)
@@ -183,13 +223,15 @@ classdef Population < handle
            
            %Module
            %Mutates a given matrix. Call this function only sometimes
-           amountOfMutation = floor(size(object.individuals_, 1)*size(object.individuals_, 2)*(Population.MUTATION_FACTOR/100)); %The number of individuals that will be mutated.
+           amountOfMutation = floor(object.m*object.n*(Population.MUTATION_FACTOR/100)); %The number of individuals that will be mutated.
            completedMutations = 0; %Indicates the total number of successful mutations.
            %Module
            while(amountOfMutation < completedMutations)
-               randomM = randi(size(object.indiduals_, 1));
-               randomN = randi(size(object.indiduals_, 2));
-               child(randomM, randomN) = randi(Population.MAXIMUM_PIXEL_VALUE);
+               randomM = randi(object.m);
+               randomN = randi(object.n);
+               randomM2 = randi(object.n);
+               randomN2 = randi(object.n);
+               child(randomM, randomN) = child(randomM2, randomN2);
                completedMutations = completedMutations + 1;
            end
            result = child;
@@ -202,14 +244,14 @@ classdef Population < handle
           %     individual is sought.
            
           %Module
-          result = floor(rand*rand*(object.size) + 1); 
+          result = floor(rand^Population.POWER_OF_RANDOM_GENERATOR*(object.size) + 1); 
        end
        
        function result = getIndividual(object, index)
            %Gets an individual in the population.
            %    @object: the population in which an individual is sought.
            %    @index: the index of the individual that is sought.
-           
+
            result = object.individuals_(:, :, object.index(index));
        end
        
@@ -226,11 +268,11 @@ classdef Population < handle
             %If the new individual's rating is better than the worst rating 
             %in the population, add that individual to the population and
             %delete the old individual.
+            display(['The new individuals rating is ',num2str(newIndividualsRating)]);
             display(num2str(object.ratings_));
-            pause(Population.PAUSE_BETWEEN_ADDITION);
            if (newRatings(length(newRatings)) ~= newIndividualsRating)
                object.individuals_(:,:,newIndex(length(newIndex))) = individual;
-               object.ratings_(length(object.ratings_)) = newIndividualsRating;
+               object.ratings_(object.size) = newIndividualsRating;
                [object.ratings_, object.index] = sort(object.ratings_, 'descend');
            end
        end

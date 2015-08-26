@@ -12,7 +12,7 @@ classdef PowerMeter<handle
            %    @object : the fake powerMeter being created
            object.text = text;
            size = get(gcf, 'Position');
-           object.solution =randi(Population.MAXIMUM_PIXEL_VALUE, 30,30);
+           object.solution =randi(Population.MAXIMUM_PIXEL_VALUE, 4,4);
            object.history = 0;
         end
         
@@ -21,11 +21,15 @@ classdef PowerMeter<handle
             %   @object : the current powermeter for which the fake value is sought.
             %   @matrix : a potential solution
             %Locations of Bigger and Smalller.
-             biggerThan = matrix > object.solution;
+             biggerThan =  < matrixobject.solution;
              smallerThan = matrix < object.solution;
             %Power Output
              totalSmall = (smallerThan.*matrix)./(smallerThan.*object.solution + ~smallerThan);
+             display('total small:');
+                 display(num2str(totalSmall));
              totalBig = (biggerThan.*object.solution)./(biggerThan.*matrix+~biggerThan);
+             display('total big:');
+             display(num2str(totalBig));
              currentRating = mean(mean(totalSmall+totalBig));
              
              if (currentRating == 0)

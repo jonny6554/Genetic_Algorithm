@@ -11,34 +11,28 @@ function geneticAlgorithm(groupsM, groupsN, figureNumber)
     population = Population(POPULATION_SIZE, groupsM, groupsN, figureNumber); %The population of the genetic algorithm.
     initialPower = getbestValue(population);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     powerProgression = initialPower; %The progression of the power meter's value over time.
-
+    mutatedPopulation = Population(POPULATION_SIZE, groupsM, groupsN, figureNumber);
+    
     average = 0;
     tmp = 0;
-    
     %Module.
     while(getbestValue(population) < initialPower*POWER_IMPROVEMENT)
          %Mutate the individual by combining the values selected in the random
          %templates.
-         
          for i =1:CHILDREN_BEFORE_POPULATION_COMBINATION
              ratingOfChild = population.permutate();
              if (average == 0)
-                average = sum(population.ratings);
+                average = mean(population.ratings);
              else
-                 tmp = sum(population.ratings);
+                 tmp = mean(population.ratings);
                  average = [average, tmp];
-                 if (tmp < average(length(average)-1))
-                     display('???');
-                     plot(average);
-                     pause(200);
-                 end
              end
              figure(2);
              plot(average);
-             figure(1);
+             figure(1)
          end
-         
-         
+         mutatedPopulation.addToFirst(population);
+         makeIdentical(population, mutatedPopulation);
     end
     display(['The intial value, ', num2str(initialPower), ', has been augmented successfully by atleast a factor of ', num2str(POWER_IMPROVEMENT), '!']);
 end
